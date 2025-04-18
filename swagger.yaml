@@ -1,0 +1,358 @@
+openapi: 3.0.0
+info:
+  title: Team Detector API
+  description: API for team culture assessment and analysis
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+components:
+  schemas:
+    Company:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        teamsCount:
+          type: integer
+        employeesCount:
+          type: integer
+
+    Team:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        companyId:
+          type: integer
+          format: int64
+
+    Employee:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        teamId:
+          type: integer
+          format: int64
+        testStatus:
+          type: string
+          enum: [NOT_STARTED, IN_PROGRESS, COMPLETED]
+
+    TestResult:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        employeeId:
+          type: integer
+          format: int64
+        category:
+          type: string
+          enum: [COMMUNICATION, CRITICISM, PERSUASION, LEADERSHIP, DECISION_MAKING, TRUST, DISAGREEMENT, TIME_MANAGEMENT]
+        score:
+          type: integer
+          minimum: 1
+          maximum: 5
+
+    TestQuestion:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        category:
+          type: string
+        text:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+          maxItems: 5
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+paths:
+  /auth/request-link:
+    post:
+      summary: Request magic link for authentication
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Magic link sent successfully
+        '400':
+          description: Invalid email format
+
+  /auth/verify-link:
+    post:
+      summary: Verify magic link token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Token verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '400':
+          description: Invalid token
+
+  /company:
+    get:
+      summary: Get company information
+      tags:
+        - Company
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Company information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+        '401':
+          description: Unauthorized
+
+  /teams:
+    get:
+      summary: Get all teams
+      tags:
+        - Teams
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Teams retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Team'
+    post:
+      summary: Create a new team
+      tags:
+        - Teams
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Team'
+      responses:
+        '201':
+          description: Team created successfully
+        '400':
+          description: Invalid team data
+
+  /teams/{id}/employees:
+    get:
+      summary: Get team employees
+      tags:
+        - Teams
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Employees retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Employee'
+    post:
+      summary: Add employee to team
+      tags:
+        - Teams
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Employee'
+      responses:
+        '201':
+          description: Employee added successfully
+        '400':
+          description: Invalid employee data
+
+  /employees/{id}/status:
+    patch:
+      summary: Update employee test status
+      tags:
+        - Employees
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                testStatus:
+                  type: string
+                  enum: [NOT_STARTED, IN_PROGRESS, COMPLETED]
+      responses:
+        '200':
+          description: Status updated successfully
+        '400':
+          description: Invalid status
+
+  /test/questions:
+    get:
+      summary: Get test questions
+      tags:
+        - Test
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Questions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TestQuestion'
+
+  /test/answers:
+    post:
+      summary: Submit test answers
+      tags:
+        - Test
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/TestResult'
+      responses:
+        '200':
+          description: Answers submitted successfully
+        '400':
+          description: Invalid answers
+
+  /teams/{id}/results:
+    get:
+      summary: Get team test results
+      tags:
+        - Results
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Results retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TestResult'
+
+  /teams/{id}/recommendations:
+    post:
+      summary: Generate team recommendations
+      tags:
+        - Results
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Recommendations generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommendations:
+                    type: string 
