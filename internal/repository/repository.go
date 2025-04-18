@@ -13,6 +13,7 @@ type Repository struct {
 type Authorization interface {
 	CreateUser(user model.User) (int, error)
 	GetUser(email, password string) (model.User, error)
+	DeleteUser(id int) error
 }
 
 func NewRepository(db *sql.DB) *Repository {

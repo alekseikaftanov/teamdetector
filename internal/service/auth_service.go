@@ -25,6 +25,10 @@ func (s *AuthService) CreateUser(user model.User) (int, error) {
 	return s.repo.CreateUser(user)
 }
 
+func (s *AuthService) GetUser(email, password string) (model.User, error) {
+	return s.repo.GetUser(email, password)
+}
+
 func (s *AuthService) GenerateToken(email, password string) (string, error) {
 	user, err := s.repo.GetUser(email, password)
 	if err != nil {
@@ -38,4 +42,8 @@ func (s *AuthService) GenerateToken(email, password string) (string, error) {
 	})
 
 	return token.SignedString([]byte(signingKey))
+}
+
+func (s *AuthService) DeleteUser(id int) error {
+	return s.repo.DeleteUser(id)
 }

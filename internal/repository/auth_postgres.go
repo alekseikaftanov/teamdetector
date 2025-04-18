@@ -17,14 +17,14 @@ func NewAuthPostgres(db *sql.DB) *AuthPostgres {
 
 func (r *AuthPostgres) CreateUser(user model.User) (int, error) {
 	var id int
-	query := `INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id`
+	query := `INSERT INTO users (email, password_hash, name, role) VALUES ($1, $2, $3, $4) RETURNING id`
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return 0, err
 	}
 
-	err = r.db.QueryRow(query, user.Email, string(hashedPassword), user.Name).Scan(&id)
+	err = r.db.QueryRow(query, user.Email, string(hashedPassword), user.Name, user.Role).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -47,4 +47,10 @@ func (r *AuthPostgres) GetUser(email, password string) (model.User, error) {
 	}
 
 	return user, nil
+}
+
+func (r *AuthPostgres) DeleteUser(id int) error {
+	query := `DELETE FROM users WHERE id = $1`
+	_, err := r.db.Exec(query, id)
+	return err
 }
