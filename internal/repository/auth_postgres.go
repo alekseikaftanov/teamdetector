@@ -17,7 +17,7 @@ func NewAuthPostgres(db *sql.DB) *AuthPostgres {
 
 func (r *AuthPostgres) CreateUser(user model.User) (int, error) {
 	var id int
-	query := `INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id`
+	query := `INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id`
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -34,7 +34,7 @@ func (r *AuthPostgres) CreateUser(user model.User) (int, error) {
 
 func (r *AuthPostgres) GetUser(email, password string) (model.User, error) {
 	var user model.User
-	query := `SELECT id, email, password, name, created_at FROM users WHERE email = $1`
+	query := `SELECT id, email, password_hash, name, created_at FROM users WHERE email = $1`
 
 	err := r.db.QueryRow(query, email).Scan(&user.ID, &user.Email, &user.Password, &user.Name, &user.CreatedAt)
 	if err != nil {
