@@ -33,6 +33,7 @@ func main() {
 		{
 			auth.POST("/register", handlers.Register)
 			auth.POST("/login", handlers.Login)
+			auth.DELETE("/users/:id", handlers.DeleteUser)
 		}
 	}
 

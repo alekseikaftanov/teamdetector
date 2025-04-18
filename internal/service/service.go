@@ -11,7 +11,9 @@ type Service struct {
 
 type Authorization interface {
 	CreateUser(user model.User) (int, error)
+	GetUser(email, password string) (model.User, error)
 	GenerateToken(email, password string) (string, error)
+	DeleteUser(id int) error
 }
 
 func NewService(repos *repository.Repository) *Service {
