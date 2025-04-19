@@ -51,6 +51,22 @@ func main() {
 			teams.GET("/team/:id", handlers.UserIdentity, handlers.GetTeam)
 			teams.DELETE("/team/:id", handlers.UserIdentity, handlers.DeleteTeam)
 		}
+
+		// Survey routes
+		survey := api.Group("/surveys", handlers.UserIdentity)
+		{
+			// General endpoints
+			survey.GET("/questions", handlers.GetSurveyQuestions)
+			survey.GET("/options", handlers.GetSurveyOptions)
+			survey.POST("", handlers.CreateSurvey)
+			survey.GET("/team/:team_id", handlers.GetSurveysByTeam)
+			survey.GET("/:survey_id", handlers.GetSurvey)
+			survey.DELETE("/:survey_id", handlers.DeleteSurvey)
+
+			// Survey responses as a nested resource
+			survey.POST("/:survey_id/responses", handlers.CreateSurveyResponse)
+			survey.GET("/:survey_id/responses", handlers.GetSurveyResponses)
+		}
 	}
 
 	port := os.Getenv("PORT")

@@ -10,6 +10,7 @@ type Repository struct {
 	Authorization
 	Company
 	Team
+	Survey
 }
 
 type Authorization interface {
@@ -37,5 +38,6 @@ func NewRepository(db *sql.DB) *Repository {
 		Authorization: NewAuthPostgres(db),
 		Company:       NewCompanyPostgres(db),
 		Team:          NewTeamPostgres(db),
+		Survey:        NewSurveyPostgres(db),
 	}
 }

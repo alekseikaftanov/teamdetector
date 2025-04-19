@@ -9,6 +9,7 @@ type Service struct {
 	Authorization
 	Company
 	Team
+	Survey
 }
 
 type Authorization interface {
@@ -32,10 +33,22 @@ type Team interface {
 	DeleteTeam(id int) error
 }
 
+type Survey interface {
+	CreateSurvey(survey model.Survey) (int, error)
+	GetSurveyByID(id int) (model.Survey, error)
+	GetSurveysByTeamID(teamID int) ([]model.Survey, error)
+	DeleteSurvey(id int) error
+	CreateSurveyResponse(response model.SurveyResponse) (int, error)
+	GetSurveyResponses(surveyID int) ([]model.SurveyResponse, error)
+	GetSurveyOptions() ([]model.SurveyOption, error)
+	GetSurveyQuestions() ([]model.SurveyQuestion, error)
+}
+
 func NewService(repos *repository.Repository) *Service {
 	return &Service{
 		Authorization: NewAuthService(repos.Authorization),
 		Company:       NewCompanyService(repos.Company),
 		Team:          NewTeamService(repos.Team),
+		Survey:        NewSurveyService(repos.Survey),
 	}
 }
