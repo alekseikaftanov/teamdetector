@@ -1,0 +1,14 @@
+port: "8000"
+
+db:
+  host: "localhost"
+  port: "5432"
+  username: "postgres"
+  dbname: "teamdetected"
+  sslmode: "disable"
+
+email:
+  from: "your-email@example.com"
+  password: "your-app-password"
+  host: "smtp.gmail.com"
+  port: "587" 

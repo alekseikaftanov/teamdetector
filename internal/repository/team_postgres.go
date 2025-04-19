@@ -84,3 +84,30 @@ func (r *TeamPostgres) DeleteTeam(id int) error {
 	}
 	return nil
 }
+
+func (r *TeamPostgres) AddUserToTeam(teamID, userID int) error {
+	query := `INSERT INTO team_members (team_id, user_id) VALUES ($1, $2)`
+	_, err := r.db.Exec(query, teamID, userID)
+	return err
+}
+
+func (r *TeamPostgres) AddUsersToTeam(teamID int, userIDs []int) error {
+	tx, err := r.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	query := `INSERT INTO team_members (team_id, user_id) VALUES ($1, $2)`
+	for _, userID := range userIDs {
+		if _, err := tx.Exec(query, teamID, userID); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (r *TeamPostgres) BeginTx() (*sqlx.Tx, error) {
+	return r.db.Beginx()
+}

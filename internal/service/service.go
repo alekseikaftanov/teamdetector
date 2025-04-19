@@ -10,6 +10,7 @@ type Service struct {
 	Company
 	Team
 	Survey
+	Email
 }
 
 type Authorization interface {
@@ -34,6 +35,8 @@ type Team interface {
 	GetTeamByID(id int) (model.Team, error)
 	GetTeamsByCompanyID(companyID int) ([]model.Team, error)
 	DeleteTeam(id int) error
+	AddUserToTeam(teamID int, input model.AddUserToTeamInput) error
+	AddUsersToTeam(teamID int, inputs []model.AddUserToTeamInput) error
 }
 
 type Survey interface {
@@ -47,11 +50,16 @@ type Survey interface {
 	GetSurveyQuestions() ([]model.SurveyQuestion, error)
 }
 
-func NewService(repos *repository.Repository) *Service {
+type Email interface {
+	SendSurveyInvitation(email, name string, teamID int) error
+}
+
+func NewService(repos *repository.Repository, emailServ Email) *Service {
 	return &Service{
 		Authorization: NewAuthService(repos.Authorization),
 		Company:       NewCompanyService(repos.Company),
-		Team:          NewTeamService(repos.Team),
+		Team:          NewTeamService(repos.Team, repos.Authorization, emailServ),
 		Survey:        NewSurveyService(repos.Survey),
+		Email:         emailServ,
 	}
 }

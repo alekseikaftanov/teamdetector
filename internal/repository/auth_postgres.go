@@ -88,3 +88,10 @@ func (r *AuthPostgres) DeleteUser(id int) error {
 	}
 	return nil
 }
+
+func (r *AuthPostgres) GetUserByEmail(email string) (model.User, error) {
+	var user model.User
+	query := `SELECT id, email, name, role FROM users WHERE email = $1`
+	err := r.db.Get(&user, query, email)
+	return user, err
+}

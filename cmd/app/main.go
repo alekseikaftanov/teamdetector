@@ -1,39 +1,52 @@
 package main
 
 import (
-	"log"
+	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
+	"github.com/teamdetected/internal/config"
 	"github.com/teamdetected/internal/handler"
 	"github.com/teamdetected/internal/repository"
+	"github.com/teamdetected/internal/server"
 	"github.com/teamdetected/internal/service"
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+	// Инициализация конфигурации
+	cfg, err := config.Init()
+	if err != nil {
+		panic(err)
 	}
 
-	dsn := "host=" + os.Getenv("DB_HOST") + " port=" + os.Getenv("DB_PORT") + " user=" + os.Getenv("DB_USER") + " dbname=" + os.Getenv("DB_NAME") + " password=" + os.Getenv("DB_PASSWORD") + " sslmode=disable"
+	// Подключение к базе данных
+	dsn := "host=" + cfg.DB.Host + " port=" + cfg.DB.Port + " user=" + cfg.DB.Username + " dbname=" + cfg.DB.DBName + " password=" + os.Getenv("DB_PASSWORD") + " sslmode=" + cfg.DB.SSLMode
 	db, err := repository.NewPostgresDB(dsn)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
+	// Создаем репозитории
 	repos := repository.NewRepository(db)
+
+	// Создаем email сервис
 	emailServ := service.NewEmailService(
-		os.Getenv("EMAIL_FROM"),
-		os.Getenv("EMAIL_PASSWORD"),
-		os.Getenv("EMAIL_HOST"),
-		os.Getenv("EMAIL_PORT"),
+		cfg.Email.From,
+		cfg.Email.Password,
+		cfg.Email.Host,
+		cfg.Email.Port,
 	)
+
+	// Создаем сервисы
 	services := service.NewService(repos, emailServ)
+
+	// Создаем обработчики
 	handlers := handler.NewHandler(services)
 
+	// Инициализация сервера
 	router := gin.Default()
-
 	api := router.Group("/api/v1")
 	{
 		auth := api.Group("/auth")
@@ -57,7 +70,6 @@ func main() {
 			teams.GET("/company/:company_id", handlers.UserIdentity, handlers.GetTeams)
 			teams.GET("/team/:id", handlers.UserIdentity, handlers.GetTeam)
 			teams.DELETE("/team/:id", handlers.UserIdentity, handlers.DeleteTeam)
-			teams.POST("/:team_id/users", handlers.UserIdentity, handlers.AddUsersToTeam)
 		}
 
 		// Survey routes
@@ -77,12 +89,21 @@ func main() {
 		}
 	}
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	srv := server.NewServer(cfg.Port, router)
 
-	if err := router.Run(":" + port); err != nil {
-		log.Fatal(err)
+	// Запуск сервера
+	go func() {
+		if err := srv.Run(); err != nil {
+			panic(err)
+		}
+	}()
+
+	// Graceful Shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+
+	if err := srv.Shutdown(context.Background()); err != nil {
+		panic(err)
 	}
 }

@@ -32,3 +32,13 @@ func (m *Team) DeleteTeam(id int) error {
 	args := m.Called(id)
 	return args.Error(0)
 }
+
+func (m *Team) AddUserToTeam(teamID int, input model.AddUserToTeamInput) error {
+	args := m.Called(teamID, input)
+	return args.Error(0)
+}
+
+func (m *Team) AddUsersToTeam(teamID int, inputs []model.AddUserToTeamInput) error {
+	args := m.Called(teamID, inputs)
+	return args.Error(0)
+}

@@ -9,6 +9,7 @@ type Authorization interface {
 	CreateUser(user model.User) (int, error)
 	GetUser(email, password string) (model.User, error)
 	GetUserByID(id int) (model.User, error)
+	GetUserByEmail(email string) (model.User, error)
 	UpdateUser(id int, user model.User) error
 	DeleteUser(id int) error
 }
@@ -25,6 +26,9 @@ type Team interface {
 	GetTeamByID(id int) (model.Team, error)
 	GetTeamsByCompanyID(companyID int) ([]model.Team, error)
 	DeleteTeam(id int) error
+	AddUserToTeam(teamID, userID int) error
+	AddUsersToTeam(teamID int, userIDs []int) error
+	BeginTx() (*sqlx.Tx, error)
 }
 
 type Survey interface {
