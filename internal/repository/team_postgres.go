@@ -1,26 +1,42 @@
 package repository
 
 import (
-	"database/sql"
+	"fmt"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/teamdetected/internal/model"
 )
 
 type TeamPostgres struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
-func NewTeamPostgres(db *sql.DB) *TeamPostgres {
+func NewTeamPostgres(db *sqlx.DB) *TeamPostgres {
 	return &TeamPostgres{db: db}
 }
 
 func (r *TeamPostgres) CreateTeam(team model.Team) (int, error) {
 	var id int
-	query := `INSERT INTO teams (name, description, company_id, created_by) VALUES ($1, $2, $3, $4) RETURNING id`
+	query := `INSERT INTO teams (name, description, company_id, created_by) 
+              VALUES (:name, :description, :company_id, :created_by) RETURNING id`
 
-	err := r.db.QueryRow(query, team.Name, team.Description, team.CompanyID, team.CreatedBy).Scan(&id)
+	params := map[string]interface{}{
+		"name":        team.Name,
+		"description": team.Description,
+		"company_id":  team.CompanyID,
+		"created_by":  team.CreatedBy,
+	}
+
+	rows, err := r.db.NamedQuery(query, params)
 	if err != nil {
 		return 0, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		if err := rows.Scan(&id); err != nil {
+			return 0, err
+		}
 	}
 
 	return id, nil
@@ -28,17 +44,10 @@ func (r *TeamPostgres) CreateTeam(team model.Team) (int, error) {
 
 func (r *TeamPostgres) GetTeamByID(id int) (model.Team, error) {
 	var team model.Team
-	query := `SELECT id, name, description, company_id, created_by, created_at, updated_at FROM teams WHERE id = $1`
+	query := `SELECT id, name, description, company_id, created_by, created_at, updated_at 
+              FROM teams WHERE id = $1`
 
-	err := r.db.QueryRow(query, id).Scan(
-		&team.ID,
-		&team.Name,
-		&team.Description,
-		&team.CompanyID,
-		&team.CreatedBy,
-		&team.CreatedAt,
-		&team.UpdatedAt,
-	)
+	err := r.db.Get(&team, query, id)
 	if err != nil {
 		return model.Team{}, err
 	}
@@ -47,36 +56,31 @@ func (r *TeamPostgres) GetTeamByID(id int) (model.Team, error) {
 }
 
 func (r *TeamPostgres) GetTeamsByCompanyID(companyID int) ([]model.Team, error) {
-	query := `SELECT id, name, description, company_id, created_by, created_at, updated_at FROM teams WHERE company_id = $1`
-	rows, err := r.db.Query(query, companyID)
+	var teams []model.Team
+	query := `SELECT id, name, description, company_id, created_by, created_at, updated_at 
+              FROM teams WHERE company_id = $1`
+
+	err := r.db.Select(&teams, query, companyID)
 	if err != nil {
 		return nil, err
-	}
-	defer rows.Close()
-
-	var teams []model.Team
-	for rows.Next() {
-		var team model.Team
-		err := rows.Scan(
-			&team.ID,
-			&team.Name,
-			&team.Description,
-			&team.CompanyID,
-			&team.CreatedBy,
-			&team.CreatedAt,
-			&team.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		teams = append(teams, team)
 	}
 
 	return teams, nil
 }
 
 func (r *TeamPostgres) DeleteTeam(id int) error {
-	query := `DELETE FROM teams WHERE id = $1`
-	_, err := r.db.Exec(query, id)
-	return err
+	query := `DELETE FROM teams WHERE id = :id`
+	result, err := r.db.NamedExec(query, map[string]interface{}{"id": id})
+	if err != nil {
+		return err
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("team with id %d not found", id)
+	}
+	return nil
 }

@@ -1,56 +1,90 @@
 package repository
 
 import (
-	"database/sql"
+	"fmt"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/teamdetected/internal/model"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthPostgres struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
-func NewAuthPostgres(db *sql.DB) *AuthPostgres {
+func NewAuthPostgres(db *sqlx.DB) *AuthPostgres {
 	return &AuthPostgres{db: db}
 }
 
 func (r *AuthPostgres) CreateUser(user model.User) (int, error) {
 	var id int
-	query := `INSERT INTO users (email, password_hash, name, role) VALUES ($1, $2, $3, $4) RETURNING id`
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	query := `INSERT INTO users (name, email, password_hash) VALUES (:name, :email, :password) RETURNING id`
+	rows, err := r.db.NamedQuery(query, map[string]interface{}{
+		"name":     user.Name,
+		"email":    user.Email,
+		"password": user.Password,
+	})
 	if err != nil {
 		return 0, err
 	}
+	defer rows.Close()
 
-	err = r.db.QueryRow(query, user.Email, string(hashedPassword), user.Name, user.Role).Scan(&id)
-	if err != nil {
-		return 0, err
+	if rows.Next() {
+		if err := rows.Scan(&id); err != nil {
+			return 0, err
+		}
 	}
-
 	return id, nil
 }
 
 func (r *AuthPostgres) GetUser(email, password string) (model.User, error) {
 	var user model.User
-	query := `SELECT id, email, password_hash, name, created_at FROM users WHERE email = $1`
+	query := `SELECT id, name, email, password_hash FROM users WHERE email = $1`
+	err := r.db.Get(&user, query, email)
+	return user, err
+}
 
-	err := r.db.QueryRow(query, email).Scan(&user.ID, &user.Email, &user.Password, &user.Name, &user.CreatedAt)
-	if err != nil {
-		return model.User{}, err
+func (r *AuthPostgres) GetUserByID(id int) (model.User, error) {
+	var user model.User
+	query := `SELECT id, name, email, password_hash FROM users WHERE id = $1`
+	err := r.db.Get(&user, query, id)
+	return user, err
+}
+
+func (r *AuthPostgres) UpdateUser(id int, user model.User) error {
+	query := `UPDATE users SET name = :name, email = :email WHERE id = :id`
+	params := map[string]interface{}{
+		"id":    id,
+		"name":  user.Name,
+		"email": user.Email,
 	}
-
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	result, err := r.db.NamedExec(query, params)
 	if err != nil {
-		return model.User{}, err
+		return err
 	}
-
-	return user, nil
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("user with id %d not found", id)
+	}
+	return nil
 }
 
 func (r *AuthPostgres) DeleteUser(id int) error {
-	query := `DELETE FROM users WHERE id = $1`
-	_, err := r.db.Exec(query, id)
-	return err
+	query := `DELETE FROM users WHERE id = :id`
+	result, err := r.db.NamedExec(query, map[string]interface{}{
+		"id": id,
+	})
+	if err != nil {
+		return err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("user with id %d not found", id)
+	}
+	return nil
 }

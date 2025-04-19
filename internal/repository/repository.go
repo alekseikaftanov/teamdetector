@@ -1,21 +1,15 @@
 package repository
 
 import (
-	"database/sql"
-
+	"github.com/jmoiron/sqlx"
 	"github.com/teamdetected/internal/model"
 )
-
-type Repository struct {
-	Authorization
-	Company
-	Team
-	Survey
-}
 
 type Authorization interface {
 	CreateUser(user model.User) (int, error)
 	GetUser(email, password string) (model.User, error)
+	GetUserByID(id int) (model.User, error)
+	UpdateUser(id int, user model.User) error
 	DeleteUser(id int) error
 }
 
@@ -33,7 +27,25 @@ type Team interface {
 	DeleteTeam(id int) error
 }
 
-func NewRepository(db *sql.DB) *Repository {
+type Survey interface {
+	CreateSurvey(survey model.Survey) (int, error)
+	GetSurveyByID(id int) (model.Survey, error)
+	GetSurveysByTeamID(teamID int) ([]model.Survey, error)
+	DeleteSurvey(id int) error
+	CreateSurveyResponse(response model.SurveyResponse) (int, error)
+	GetSurveyResponses(surveyID int) ([]model.SurveyResponse, error)
+	GetSurveyOptions() ([]model.SurveyOption, error)
+	GetSurveyQuestions() ([]model.SurveyQuestion, error)
+}
+
+type Repository struct {
+	Authorization
+	Company
+	Team
+	Survey
+}
+
+func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{
 		Authorization: NewAuthPostgres(db),
 		Company:       NewCompanyPostgres(db),

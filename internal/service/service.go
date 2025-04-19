@@ -15,6 +15,9 @@ type Service struct {
 type Authorization interface {
 	CreateUser(user model.User) (int, error)
 	GetUser(email, password string) (model.User, error)
+	GetUserByID(id int) (model.User, error)
+	UpdateUser(id int, input model.UpdateUserInput) error
+	ChangePassword(id int, oldPassword, newPassword string) error
 	GenerateToken(email, password string) (string, error)
 	DeleteUser(id int) error
 }
