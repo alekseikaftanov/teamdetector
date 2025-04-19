@@ -7,6 +7,8 @@ import (
 
 type Service struct {
 	Authorization
+	Company
+	Team
 }
 
 type Authorization interface {
@@ -16,8 +18,24 @@ type Authorization interface {
 	DeleteUser(id int) error
 }
 
+type Company interface {
+	CreateCompany(company model.Company) (int, error)
+	GetCompanyByID(id int) (model.Company, error)
+	GetCompaniesByUserID(userID int) ([]model.Company, error)
+	DeleteCompany(id int) error
+}
+
+type Team interface {
+	CreateTeam(team model.Team) (int, error)
+	GetTeamByID(id int) (model.Team, error)
+	GetTeamsByCompanyID(companyID int) ([]model.Team, error)
+	DeleteTeam(id int) error
+}
+
 func NewService(repos *repository.Repository) *Service {
 	return &Service{
 		Authorization: NewAuthService(repos.Authorization),
+		Company:       NewCompanyService(repos.Company),
+		Team:          NewTeamService(repos.Team),
 	}
 }

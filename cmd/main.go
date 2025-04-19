@@ -33,7 +33,23 @@ func main() {
 		{
 			auth.POST("/register", handlers.Register)
 			auth.POST("/login", handlers.Login)
-			auth.DELETE("/users/:id", handlers.DeleteUser)
+			auth.DELETE("/users/:id", handlers.UserIdentity, handlers.DeleteUser)
+		}
+
+		companies := api.Group("/companies")
+		{
+			companies.POST("", handlers.UserIdentity, handlers.CreateCompany)
+			companies.GET("", handlers.UserIdentity, handlers.GetCompanies)
+			companies.GET("/:id", handlers.UserIdentity, handlers.GetCompany)
+			companies.DELETE("/:id", handlers.UserIdentity, handlers.DeleteCompany)
+		}
+
+		teams := api.Group("/teams")
+		{
+			teams.POST("", handlers.UserIdentity, handlers.CreateTeam)
+			teams.GET("/company/:company_id", handlers.UserIdentity, handlers.GetTeams)
+			teams.GET("/team/:id", handlers.UserIdentity, handlers.GetTeam)
+			teams.DELETE("/team/:id", handlers.UserIdentity, handlers.DeleteTeam)
 		}
 	}
 
